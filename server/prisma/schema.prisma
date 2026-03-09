@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  passwordHash       String
+  fullName           String
+  phone              String?
+  avatarUrl          String?
+  subscriptionStatus SubscriptionStatus @default(FREE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  cars               Car[]
+  refreshTokens      RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model Car {
+  id           String   @id @default(uuid())
+  userId       String
+  licensePlate String
+  make         String
+  model        String
+  color        String
+  year         Int?
+  qrCodeId     String   @unique @default(uuid())
+  nickname     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([qrCodeId])
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  carId      String
+  type       NotificationType
+  message    String
+  senderName String?
+  isRead     Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  car Car @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([carId])
+  @@index([carId, isRead])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique  // SHA-256 hash — never store the raw token
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+enum SubscriptionStatus {
+  FREE
+  ACTIVE
+  EXPIRED
+}
+
+enum NotificationType {
+  PARKING_ISSUE
+  BLOCKING
+  ACCIDENT
+  EMERGENCY
+  GENERAL
+}
